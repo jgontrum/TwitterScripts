@@ -30,9 +30,14 @@ dbHost = dbHost[dbHost.find('://') + 3:]
 db = sqlsoup.SQLSoup('mysql://' + dbUser + ":" + dbPassword + "@" + dbHost)
 # </editor-fold>
 
-rp = db.execute('select JSON, TweetID, Longitude, Latitude, LocationDE from DeChAtGEO LIMIT 10')
+rp = db.execute('select JSON, TweetID, Longitude, Latitude, LocationDE from DeChAtGEO LIMIT 20')
+
+counter = 0
 
 for json, tweetid, long, lat, grm in rp.fetchall():
+    counter += 1
+    if counter % 100 == 0:
+        print counter
     if long is None or lat is None or grm is None:
         matches = lonlatpattern.search(json)
         if matches != None:
@@ -44,8 +49,7 @@ for json, tweetid, long, lat, grm in rp.fetchall():
                 valid = 1
 
             q = 'UPDATE ' + dbTable + " SET Longitude = " + str(lon) + ", Latitude = " + str(
-                lat) + ", Country = " + country + ", LocationDE = " + str(valid) + " WHERE TweetID = " + str(tweetid)
-            print q
+                lat) + ", Country = '" + country + "', LocationDE = " + str(valid) + " WHERE TweetID = " + str(tweetid)
             db.bind.execute(q)
         else:
             pass
