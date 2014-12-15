@@ -13,7 +13,7 @@ lonlatpattern = re.compile('\{latitude=(\d+\.\d+).*longitude=(\d+\.\d+)\}')
 # <editor-fold desc="SQL Connect">
 # Read in config:
 config = ConfigParser.RawConfigParser()
-config.read('/Users/johannes/Development/Tweets2SQL/config.properties')
+config.read('../config.properties')
 
 dbHost = config.get('MySQL', 'mySQLHost')
 dbUser = config.get('MySQL', 'mySQLUser')
@@ -54,14 +54,15 @@ for lon, lat, text in rp.fetchall():
 
 for tokenList in tokenDistribution.values():
     count = len(tokenList)
-    npList = np.asarray(tokenList, dtype=float)
-    (meanx,meany) = tuple(np.mean(npList, axis=0))
-    variance_num = 0
-    for (pointx,pointy) in tokenList:
-        variance_num += (pointx-meanx)**2 + (pointy-meany)**2
-    variance = variance_num/count
-    if variance < 350 and count > 2:
-        coordinates.append((meanx,meany))
+    if count > 2:
+        npList = np.asarray(tokenList, dtype=float)
+        (meanx,meany) = tuple(np.mean(npList, axis=0))
+        variance_num = 0
+        for (pointx,pointy) in tokenList:
+            variance_num += (pointx-meanx)**2 + (pointy-meany)**2
+        variance = variance_num/count
+        if variance < 1:
+            coordinates.append((meanx,meany))
 
 
 print "Num:" , len(coordinates)
