@@ -53,12 +53,15 @@ for lon, lat, text in rp.fetchall():
 #         coordinates.append((lon/float(c), lat/float(c)))
 
 for tokenList in tokenDistribution.values():
+    count = len(tokenList)
     npList = np.asarray(tokenList, dtype=float)
-    variance = np.var(npList)
-    mean = np.mean(npList, axis=1)
-    print(mean)
-    if variance < 350:
-        coordinates.append(mean)
+    (meanx,meany) = tuple(np.mean(npList, axis=0))
+    variance_num = 0
+    for (pointx,pointy) in tokenList:
+        variance_num += (pointx-meanx)**2 + (pointy-meany)**2
+    variance = variance_num/count
+    if variance < 350 and count > 2:
+        coordinates.append((meanx,meany))
 
 
 print "Num:" , len(coordinates)
