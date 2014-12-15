@@ -26,18 +26,46 @@ dbHost = dbHost[dbHost.find('://') + 3:]
 db = sqlsoup.SQLSoup('mysql://' + dbUser + ":" + dbPassword + "@" + dbHost)
 # </editor-fold>
 
-rp = db.execute('select Longitude, Latitude from ' + dbTable + ' WHERE LocationDE = 1')
+rp = db.execute('select Longitude, Latitude, Text from ' + dbTable + ' WHERE LocationDE = 1')
 
+tokendict = {}
+tokenDistribution = {}
 # <editor-fold desc="Fetch data">
 coordinates = list()
-for lon, lat in rp.fetchall():
-    coordinates.append((lon, lat))
+for lon, lat, text in rp.fetchall():
+    for token in text.split():
+        if token in tokendict:
+            loo, lao, coo = tokendict[token]
+            loo += lon
+            lao += lat
+            coo += 1
+            tokendict[token] = (loo, lao, coo)
+            tokenDistribution[token].append((lon,lat))
+        else:
+            tokendict[token] = (lon, lat, 1)
+            tokenDistribution[token] = [(lon,lat)]
+
+    #coordinates.append((lon, lat))
 # </editor-fold>
 
+# for lon, lat, c in tokendict.values():
+#     if c > 2:
+#         coordinates.append((lon/float(c), lat/float(c)))
+
+for tokenList in tokenDistribution.values():
+    npList = np.asarray(tokenList, dtype=float)
+    variance = np.var(npList)
+    mean = np.mean(npList, axis=1)
+    print(mean)
+    if variance < 350:
+        coordinates.append(mean)
+
+
+print "Num:" , len(coordinates)
 # <editor-fold desc="Clustering">
 # Create numpy array
 data = np.asarray(coordinates, dtype=float)
-kmeans = KMeans(n_clusters=14)
+kmeans = KMeans(n_clusters=20)
 kmeans.fit(data)
 # </editor-fold>
 
@@ -67,8 +95,8 @@ for lon, lat in coordinates:
     map.plot(lon, lat, 'r,', latlon=True)
 
 # Draw centroids
-# for lon, lat in kmeans.cluster_centers_:
-#     map.plot(lon, lat, 'b.', latlon=True)
+for lon, lat in kmeans.cluster_centers_:
+    map.plot(lon, lat, 'b.', latlon=True)
 # </editor-fold>
 
 print len(coordinates)
