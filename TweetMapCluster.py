@@ -6,16 +6,6 @@ from sklearn.cluster import KMeans
 import ConfigParser
 import sqlsoup
 import re
-import countries
-
-cc = countries.CountryChecker('TM_WORLD_BORDERS-0.3.shp')
-def isInTargetCounty(lat, lon):
-    country = cc.getCountry(countries.Point(lat, lon))
-    if not country == None:
-        c =  cc.getCountry(countries.Point(lat, lon)).iso
-        if c == "CH" or c == "DE" or c == "AT":
-            return True
-    return False
 
 # Get data
 # Regular expression to find coordinates
@@ -35,23 +25,21 @@ dbTable = "DeChAtGEO"
 dbHost = dbHost[dbHost.find('://') + 3:]
 db = sqlsoup.SQLSoup('mysql://' + dbUser + ":" + dbPassword + "@" + dbHost)
 # </editor-fold>
-rp = db.execute('select JSON from ' + dbTable)
+
+rp = db.execute('select Longitude, Latitude from ' + dbTable + ' WHERE LocationDE = 1')
+
 # <editor-fold desc="Fetch data">
 coordinates = list()
-for jsonrow in rp.fetchall():
-    matches = lonlatpattern.search(jsonrow.items()[0][1])
-    if matches != None:
-        lat = float(matches.group(1))
-        lon = float(matches.group(2))
-        # if isInTargetCounty(lat, lon):
-        coordinates.append((lon, lat))
+for lon, lat in rp.fetchall():
+    coordinates.append((lon, lat))
 # </editor-fold>
 
-#######
+# <editor-fold desc="Clustering">
 # Create numpy array
 data = np.asarray(coordinates, dtype=float)
-kmeans = KMeans(n_clusters=10)
+kmeans = KMeans(n_clusters=14)
 kmeans.fit(data)
+# </editor-fold>
 
 # <editor-fold desc="Prepare Basemap">
 map = Basemap(projection='merc',
@@ -73,12 +61,15 @@ map.fillcontinents(color='snow', lake_color='lightcyan')
 map.drawmapboundary(fill_color='lightblue')
 # </editor-fold>
 
+# <editor-fold desc="Drawing tweets">
 # Draw tweets
 for lon, lat in coordinates:
     map.plot(lon, lat, 'r,', latlon=True)
 
 # Draw centroids
-for lon, lat in kmeans.cluster_centers_:
-    map.plot(lon, lat, 'bo', latlon=True)
+# for lon, lat in kmeans.cluster_centers_:
+#     map.plot(lon, lat, 'b.', latlon=True)
+# </editor-fold>
 
+print len(coordinates)
 plt.show()
