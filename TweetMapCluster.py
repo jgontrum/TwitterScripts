@@ -6,6 +6,7 @@ from sklearn.cluster import KMeans
 import ConfigParser
 import sqlsoup
 import re
+from operator import itemgetter
 
 # Get data
 # Regular expression to find coordinates
@@ -48,11 +49,10 @@ for lon, lat, text in rp.fetchall():
     #coordinates.append((lon, lat))
 # </editor-fold>
 
-# for lon, lat, c in tokendict.values():
-#     if c > 2:
-#         coordinates.append((lon/float(c), lat/float(c)))
+tokenToVariance = []
 
-for tokenList in tokenDistribution.values():
+for token in tokenDistribution.keys():
+    tokenList = tokenDistribution[token]
     count = len(tokenList)
     if count > 2:
         npList = np.asarray(tokenList, dtype=float)
@@ -61,15 +61,19 @@ for tokenList in tokenDistribution.values():
         for (pointx,pointy) in tokenList:
             variance_num += (pointx-meanx)**2 + (pointy-meany)**2
         variance = variance_num/count
+        tokenToVariance.append((token,variance))
         if variance < 1:
             coordinates.append((meanx,meany))
 
+# ## Print tokens by variance
+# for token in sorted(tokenToVariance, key=itemgetter(1)):
+#     print token
 
 print "Num:" , len(coordinates)
 # <editor-fold desc="Clustering">
 # Create numpy array
 data = np.asarray(coordinates, dtype=float)
-kmeans = KMeans(n_clusters=20)
+kmeans = KMeans(n_clusters=5)
 kmeans.fit(data)
 # </editor-fold>
 
