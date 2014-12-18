@@ -50,6 +50,8 @@ for lon, lat, text in rp.fetchall():
 # </editor-fold>
 
 tokenToVariance = []
+# Factor for making degrees of longitude roughly equal degrees of latitude in variance calculation
+longitude_factor = 0.636
 
 for token in tokenDistribution.keys():
     tokenList = tokenDistribution[token]
@@ -59,7 +61,7 @@ for token in tokenDistribution.keys():
         (meanx,meany) = tuple(np.mean(npList, axis=0))
         variance_num = 0
         for (pointx,pointy) in tokenList:
-            variance_num += (pointx-meanx)**2 + (pointy-meany)**2
+            variance_num += (pointx-meanx)**2 + (longitude_factor*(pointy-meany))**2
         variance = variance_num/count
         tokenToVariance.append((token,variance))
         if variance < 1:
