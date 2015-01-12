@@ -31,7 +31,6 @@ dbTable = config.get('MySQL', 'mySQLTablePrefix')
 dbTable = "DeChAtGEO"
 
 # Connect to database
-dbHost = dbHost[dbHost.find('://') + 3:]
 db = sqlsoup.SQLSoup('mysql://' + dbUser + ":" + dbPassword + "@" + dbHost)
 # </editor-fold>
 
@@ -39,7 +38,7 @@ db = sqlsoup.SQLSoup('mysql://' + dbUser + ":" + dbPassword + "@" + dbHost)
 """ Read MySQL database in chunks """
 max_rows = db.execute('SELECT COUNT(*) FROM DeChAtGEO').fetchall()[0][0]
 current_top_row = 0
-step = 10000
+step = 1000
 def getNextDBChunk():
     global current_top_row
     global step
@@ -47,7 +46,7 @@ def getNextDBChunk():
     if current_top_row > max_rows:
         print "Finished!"
         return None
-    rp = db.execute('SELECT JSON, TweetID, Longitude, Latitude, LocationDE FROM DeChAtGEO ORDER BY CreatedAt LIMIT ' + str(current_top_row) + ',' + str(step))
+    rp = db.execute('SELECT TweetID, Longitude, Latitude, LocationDE FROM DeChAtGEO ORDER BY CreatedAt DESC LIMIT ' + str(current_top_row) + ',' + str(step))
     print "[DEBUG] Returning range from",current_top_row,"to",(current_top_row + step)
     current_top_row += step
     return rp
@@ -75,23 +74,17 @@ while True:
     rp = getNextDBChunk()
     if rp == None:
         break
-    for json, tweetid, long, lat, grm in rp.fetchall():
+    for tweetid, long, lat, grm in rp.fetchall():
         counter += 1
         if counter % 2000 == 0:
             print str(int(math.ceil((float(counter) / max_rows) * 100))) + "%"
-        if long is None or lat is None or grm is None:
-            matches = lonlatpattern.search(json)
-            if matches != None:
-                lat = float(matches.group(1))
-                lon = float(matches.group(2))
-                country = isInTargetCounty(lat, lon)
-                valid = 0
-                if country == "DE" or country == "AT" or country == "CH":
-                    valid = 1
+        if grm is None and long is not None:
+            lat = float(lat)
+            long = float(long)
+            country = isInTargetCounty(lat, long)
+            valid = 0
+            if country == "DE" or country == "AT" or country == "CH":
+                valid = 1
 
-                updateChanges('UPDATE ' + dbTable + " SET Longitude = " + str(lon) + ", Latitude = " + str(
-                    lat) + ", Country = '" + country + "', LocationDE = " + str(valid) + " WHERE TweetID = " + str(tweetid) + ";")
-            else:
-                pass
-                # delete row
+            updateChanges('UPDATE ' + dbTable + " SET Country = '" + country + "', LocationDE = " + str(valid) + " WHERE TweetID = " + str(tweetid) + ";")
 updateChanges("",final=True)
